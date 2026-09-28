@@ -12,6 +12,14 @@ However, this project is not a perfect solution for fan control. It can only con
 
 This project has the only simple function of controlling fan. If you want more complex functions such as temperature monitoring, fan curves and so on, you can install [FanControl](https://github.com/Rem0o/FanControl.Releases), which is a powerful fan controlling program, and a plugin of it that is [FanControl.LenovoPlugin](https://github.com/jiarandiana0307/FanControl.LenovoPlugin) which is based on this project, to achieve powerful fan control features. 
 
+# About this fork
+
+This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandiana0307/Lenovo-Fan-Control) by jiarandiana0307, released under the same MIT license. What changed:
+
+- The fan now starts at **normal speed** by default. The original starts at high speed. Use `--high-speed` to get the old behavior.
+- New **Start with Windows** menu item, to launch the program automatically at login (at normal speed).
+- Unrecognized command line parameters are now ignored, instead of silently resetting the start speed to high speed.
+
 # Prerequisites
 
 - Lenovo laptop
@@ -20,11 +28,11 @@ This project has the only simple function of controlling fan. If you want more c
 
 # Usage
 
-1. Download binary from [Releases](https://github.com/jiarandiana0307/Lenovo-Fan-Control/releases).
+1. Download binary from [Releases](../../releases).
 
 2. Double-click the LenovoFanControl program to run it, then you will see it in system tray.
 
-If a message box saying `Failed to open\\.\EnergyDrv` popped up, it means the Lenovo driver not found or dosen't work as expected. Otherwise, the program works fine and the fan will spin at maximum speed.
+If a message box saying `Failed to open\\.\EnergyDrv` popped up, it means the Lenovo driver not found or dosen't work as expected. Otherwise, the program works fine and the fan will spin at normal speed.
 
 ![Menu Screenshot](github/menu-screenshot.jpg)
 
@@ -38,7 +46,9 @@ You can click the `Low Speed` and `High Speed` item on the menu, or use the corr
 
 Finally, you can click the `Exit` item on the menu to terminate the program, then the fan will spin at normal speed.
 
-To select the start speed of the fan, you can run the program with command line parameter `--low-speed`, `--normal-speed` and `--high-speed`, which will set the fan to low speed, normal speed and high speed at start respectively. The default behavior is to set the fan to high speed if non of these parameters are given. For example, if you want to keep the fan spinning at low speed at start, you can run the command: `LenovoFanControl-x64.exe --low-speed`
+To make the program start automatically when you log in to Windows, tick the `Start with Windows` item on the menu. Untick it to turn this off. This adds an entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that launches the program with `--normal-speed`, and does not need administrator rights. If you move the program file to another folder, untick and tick the item again to update the path.
+
+To select the start speed of the fan, you can run the program with command line parameter `--low-speed`, `--normal-speed` and `--high-speed`, which will set the fan to low speed, normal speed and high speed at start respectively. The default behavior is to set the fan to normal speed if none of these parameters are given. For example, if you want to keep the fan spinning at low speed at start, you can run the command: `LenovoFanControl-x64.exe --low-speed`
 
 **Note:** Use the `Low Speed` mode with caution. Because this program does not have temperature monitoring, using the `Low Speed` mode can easily lead to high hardware temperatures, which can lead to hardware damage.
 

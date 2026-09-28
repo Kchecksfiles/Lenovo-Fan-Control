@@ -12,6 +12,14 @@ Language: [English](README.md)
 
 本程序仅提供控制风扇这一简单功能，如果要实现温度监控、风扇曲线控制等等更复杂的功能，可以使用[FanControl](https://github.com/Rem0o/FanControl.Releases)程序，再安装上基于本项目开发的[FanControl.LenovoPlugin](https://github.com/jiarandiana0307/FanControl.LenovoPlugin)风扇控制插件，即可实现更强大的风扇控制功能。
 
+# 关于本分支
+
+本项目是 jiarandiana0307 的 [Lenovo-Fan-Control](https://github.com/jiarandiana0307/Lenovo-Fan-Control) 的修改版，使用相同的 MIT 许可证。主要改动：
+
+- 风扇默认以**正常转速**启动（原版默认以高转速启动）。添加`--high-speed`参数可恢复原版行为。
+- 新增`开机自启动`菜单项，可让程序在登录 Windows 时自动运行（以正常转速）。
+- 无法识别的命令行参数现在会被忽略，不再把启动转速重置为高转速。
+
 # 使用前提
 
 - 联想笔记本电脑
@@ -20,11 +28,11 @@ Language: [English](README.md)
 
 # 使用方法
 
-1. 从本项目的[发布页面](https://github.com/jiarandiana0307/Lenovo-Fan-Control/releases)下载编译好的程序
+1. 从本项目的[发布页面](../../releases)下载编译好的程序
 
 2. 双击LenovoFanControl程序运行，然后你就能在系统托盘看到这个程序。
 
-如果有弹窗提示`无法访问\\.\EnergyDrv`，这说明没找到联想驱动或驱动异常。如果没有弹窗，说明程序正常运行，此时风扇会开始以最高转速运转。
+如果有弹窗提示`无法访问\\.\EnergyDrv`，这说明没找到联想驱动或驱动异常。如果没有弹窗，说明程序正常运行，此时风扇会以正常转速运转。
 
 ![程序菜单截图](github/menu-screenshot-zh_CN.jpg)
 
@@ -38,7 +46,9 @@ Language: [English](README.md)
 
 最后，点击程序菜单中的`退出`即可终止程序，随后风扇会恢复为正常转速。
 
-在运行程序时添加`--low-speed`、`--normal-speed`和`--high-speed`参数，能够手动选择风扇在开始时分别以低转速、正常转速和高转速运行。如果不添加这些参数，则风扇默认以高转速运行。例如，如果你想在程序开始运行时让风扇保持低转速，可以运行命令：`LenovoFanControl-x64.exe --low-speed`
+勾选程序菜单中的`开机自启动`，程序就会在登录 Windows 时自动运行；取消勾选即可关闭。该选项会在`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`下添加一项，以`--normal-speed`参数启动程序，无需管理员权限。如果移动了程序文件的位置，请取消勾选后重新勾选以更新路径。
+
+在运行程序时添加`--low-speed`、`--normal-speed`和`--high-speed`参数，能够手动选择风扇在开始时分别以低转速、正常转速和高转速运行。如果不添加这些参数，则风扇默认以正常转速运行。例如，如果你想在程序开始运行时让风扇保持低转速，可以运行命令：`LenovoFanControl-x64.exe --low-speed`
 
 **注意：**请谨慎使用`低转速`模式，因为本程序没有温度监控功能，所以在`低转速`模式下容易引起硬件高温从而导致硬件损坏。
 
