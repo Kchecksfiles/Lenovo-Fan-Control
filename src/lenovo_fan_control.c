@@ -15,7 +15,7 @@
 
 #define WM_TRAYICON (WM_USER + 1)
 
-#define VERSION "v0.4"
+#define VERSION "v0.4.1"
 
 enum TrayMenuIDs {
     ID_TRAY_APP_ICON = 1001,
@@ -23,6 +23,7 @@ enum TrayMenuIDs {
     ID_TRAY_LOW_SPEED,
     ID_TRAY_HIGH_SPEED,
     ID_TRAY_NORMAL_SPEED,
+    ID_TRAY_STARTUP,
     ID_TRAY_ABOUT,
     ID_TRAY_EXIT,
 };
@@ -45,6 +46,7 @@ typedef struct {
     LPCWSTR menu_low_speed;
     LPCWSTR menu_high_speed;
     LPCWSTR menu_normal_speed;
+    LPCWSTR menu_startup;
     LPCWSTR menu_about;
     LPCWSTR menu_exit;
     LPCWSTR about_text;
@@ -62,11 +64,12 @@ const LangResources en_US = {
     TEXT("Low Speed\tCtrl+Alt+F10"),
     TEXT("High Speed\tCtrl+Alt+F11"),
     TEXT("Normal Speed\tCtrl+Alt+F12"),
+    TEXT("Start with Windows"),
     TEXT("About"),
     TEXT("Exit"),
     TEXT("Lenovo Fan Control " VERSION "\n\n\
 Control fan for Lenovo laptops with Lenovo ACPI-Compliant Virtual Power Controller driver on Windows.\n\n\
-Open Source: https://github.com/jiarandiana0307/Lenovo-Fan-Control\n\n\
+Original project: https://github.com/jiarandiana0307/Lenovo-Fan-Control\n\n\
 Disclaimer: This program is not responsible for possible damage of any kind, use it at your own risk.")
 };
 
@@ -82,11 +85,12 @@ const LangResources zh_CN = {
     TEXT("低转速\tCtrl+Alt+F10"),
     TEXT("高转速\tCtrl+Alt+F11"),
     TEXT("正常转速\tCtrl+Alt+F12"),
+    TEXT("开机自启动"),
     TEXT("关于"),
     TEXT("退出"),
     TEXT("联想风扇控制 " VERSION "\n\n\
 在Windows上通过Lenovo ACPI-Compliant Virtual Power Controller驱动控制联想笔记本电脑的风扇。\n\n\
-本程序已开源：https://github.com/jiarandiana0307/Lenovo-Fan-Control\n\n\
+原项目：https://github.com/jiarandiana0307/Lenovo-Fan-Control\n\n\
 免责声明：本程序不对任何可能的损坏负责，风险自担。")
 };
 
@@ -101,7 +105,7 @@ enum FanSpeed {
     HIGH_SPEED,
     LOW_SPEED,
     NORMAL_SPEED
-} fan_speed_set_at_start = HIGH_SPEED;
+} fan_speed_set_at_start = NORMAL_SPEED;
 
 void* keep_fan_speed_low_func(void *arg) {
     keep_fan_speed_low();
@@ -142,6 +146,43 @@ void toggle_fan_normal_speed() {
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
+#define STARTUP_REG_PATH TEXT("Software\\Microsoft\\Windows\\CurrentVersion\\Run")
+#define STARTUP_REG_NAME TEXT("LenovoFanControl")
+
+BOOL is_startup_enabled() {
+    HKEY key;
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS) {
+        return FALSE;
+    }
+    LONG r = RegQueryValueEx(key, STARTUP_REG_NAME, NULL, NULL, NULL, NULL);
+    RegCloseKey(key);
+    return r == ERROR_SUCCESS;
+}
+
+void set_startup_enabled(BOOL enable) {
+    HKEY key;
+    if (RegOpenKeyEx(HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, KEY_SET_VALUE, &key) != ERROR_SUCCESS) {
+        return;
+    }
+    if (enable) {
+        TCHAR path[MAX_PATH];
+        DWORD len = GetModuleFileName(NULL, path, MAX_PATH);
+        if (len > 0 && len < MAX_PATH) {
+            TCHAR cmd[MAX_PATH + 32];
+            _sntprintf(cmd, sizeof(cmd) / sizeof(TCHAR), TEXT("\"%s\" --normal-speed"), path);
+            RegSetValueEx(key, STARTUP_REG_NAME, 0, REG_SZ, (const BYTE*)cmd,
+                          (DWORD)((_tcslen(cmd) + 1) * sizeof(TCHAR)));
+        }
+    } else {
+        RegDeleteValue(key, STARTUP_REG_NAME);
+    }
+    RegCloseKey(key);
+}
+
+void refresh_startup_menu_check() {
+    CheckMenuItem(hMenu, ID_TRAY_STARTUP, MF_BYCOMMAND | (is_startup_enabled() ? MF_CHECKED : MF_UNCHECKED));
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
@@ -161,6 +202,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             AppendMenu(hMenu, MF_STRING, ID_TRAY_HIGH_SPEED, lang->menu_high_speed);
             AppendMenu(hMenu, MF_STRING, ID_TRAY_NORMAL_SPEED, lang->menu_normal_speed);
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+            AppendMenu(hMenu, MF_STRING, ID_TRAY_STARTUP, lang->menu_startup);
+            refresh_startup_menu_check();
             AppendMenu(hMenu, MF_STRING, ID_TRAY_ABOUT, lang->menu_about);
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
             AppendMenu(hMenu, MF_STRING, ID_TRAY_EXIT, lang->menu_exit);
@@ -171,6 +214,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     break;
                 case HIGH_SPEED:
                     toggle_fan_high_speed();
+                    break;
+                case NORMAL_SPEED:
+                    toggle_fan_normal_speed();
                     break;
             }
             break;
@@ -205,6 +251,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
                 case ID_TRAY_NORMAL_SPEED:
                     toggle_fan_normal_speed();
+                    break;
+
+                case ID_TRAY_STARTUP:
+                    set_startup_enabled(!is_startup_enabled());
+                    refresh_startup_menu_check();
                     break;
 
                 case ID_TRAY_ABOUT:
@@ -256,7 +307,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             fan_speed_set_at_start = LOW_SPEED;
         } else if (wcscmp(argv[i], TEXT("--normal-speed")) == 0) {
             fan_speed_set_at_start = NORMAL_SPEED;
-        } else {
+        } else if (wcscmp(argv[i], TEXT("--high-speed")) == 0) {
             fan_speed_set_at_start = HIGH_SPEED;
         }
     }
