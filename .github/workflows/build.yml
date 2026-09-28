@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc
+
+      - name: Build x64
+        shell: msys2 {0}
+        run: |
+          mkdir -p bin
+          windres -F pe-x86-64 -i res/icon.rc -o bin/icon-x64.o
+          gcc -static -m64 -o bin/LenovoFanControl-x64.exe src/lenovo_fan_control.c src/fanctrl.c bin/icon-x64.o -lpthread -ladvapi32 -mwindows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LenovoFanControl-x64
+          path: bin/LenovoFanControl-x64.exe
