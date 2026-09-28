@@ -120,7 +120,7 @@ void toggle_fan_low_speed() {
     if (!is_keep_fan_speed_low) {
         pthread_create(&keep_fan_speed_low_thread, NULL, keep_fan_speed_low_func, NULL);
     }
-    _stprintf(nid.szTip, 64, TEXT("%s " VERSION "\n%s: %s"), lang->app_name, lang->state, lang->menu_at_low_speed);
+    _sntprintf(nid.szTip, 64, TEXT("%ls " VERSION "\n%ls: %ls"), lang->app_name, lang->state, lang->menu_at_low_speed);
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
@@ -129,7 +129,7 @@ void toggle_fan_high_speed() {
     if (!is_keep_fan_running) {
         pthread_create(&keep_fan_running_thread, NULL, keep_fan_running_func, NULL);
     }
-    _stprintf(nid.szTip, 64, TEXT("%s " VERSION "\n%s: %s"), lang->app_name, lang->state, lang->menu_at_high_speed);
+    _sntprintf(nid.szTip, 64, TEXT("%ls " VERSION "\n%ls: %ls"), lang->app_name, lang->state, lang->menu_at_high_speed);
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
@@ -142,7 +142,7 @@ void toggle_fan_normal_speed() {
         is_keep_fan_speed_low = 0;
     }
     fan_control(NORMAL);
-    _stprintf(nid.szTip, 64, TEXT("%s " VERSION "\n%s: %s"), lang->app_name, lang->state, lang->menu_at_normal_speed);
+    _sntprintf(nid.szTip, 64, TEXT("%ls " VERSION "\n%ls: %ls"), lang->app_name, lang->state, lang->menu_at_normal_speed);
     Shell_NotifyIcon(NIM_MODIFY, &nid);
 }
 
@@ -169,7 +169,7 @@ void set_startup_enabled(BOOL enable) {
         DWORD len = GetModuleFileName(NULL, path, MAX_PATH);
         if (len > 0 && len < MAX_PATH) {
             TCHAR cmd[MAX_PATH + 32];
-            _sntprintf(cmd, sizeof(cmd) / sizeof(TCHAR), TEXT("\"%s\" --normal-speed"), path);
+            _sntprintf(cmd, sizeof(cmd) / sizeof(TCHAR), TEXT("\"%ls\" --normal-speed"), path);
             RegSetValueEx(key, STARTUP_REG_NAME, 0, REG_SZ, (const BYTE*)cmd,
                           (DWORD)((_tcslen(cmd) + 1) * sizeof(TCHAR)));
         }
