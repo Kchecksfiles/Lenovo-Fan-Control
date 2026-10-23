@@ -1,5 +1,6 @@
 # Lenovo Laptop Fan Control
 
+
 ---
 
 Control fan for Lenovo laptops with `Lenovo ACPI-Compliant Virtual Power Controller` driver on Windows.
@@ -17,6 +18,8 @@ This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandian
 - The fan now starts at **normal speed** by default. The original starts at high speed. Use `--high-speed` to get the old behavior.
 - New **Start with Windows** menu item, to launch the program automatically at login (at normal speed).
 - Unrecognized command line parameters are now ignored, instead of silently resetting the start speed to high speed.
+- **High Speed** is now truly manual. It no longer switches off and on every ~9 seconds. The fan is set to maximum once and held there until you pick another mode. The program checks the fan state every 100 ms and, if the EC/BIOS drops it back, sets it to maximum again.
+- New **Auto (App Trigger)...** menu item: pick an app (e.g. a game) and a fan speed, and the fan switches automatically while that app is running.
 
 # Prerequisites
 
@@ -46,6 +49,8 @@ Finally, you can click the `Exit` item on the menu to terminate the program, the
 
 To make the program start automatically when you log in to Windows, tick the `Start with Windows` item on the menu. Untick it to turn this off. This adds an entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that launches the program with `--normal-speed`, and does not need administrator rights. If you move the program file to another folder, untick and tick the item again to update the path.
 
+To switch the fan speed automatically while a game or app is running, click `Auto (App Trigger)...` on the menu. In the box that opens, choose the app (from the list of running programs, by typing its name such as `game.exe`, or with `Browse...`), choose the fan speed to use while it runs (`High Speed`, `Low Speed` or `Normal Speed`), tick `Enable auto mode` and click `OK`. The program then checks every 2 seconds whether the app is running: when it starts, the fan switches to the chosen speed, and about 15 seconds after the app closes, the fan returns to normal speed. If you change the speed by hand while the app is running, Auto mode will not override your choice. The menu item shows a check mark while Auto mode is on, and the setting is remembered in `%APPDATA%\LenovoFanControl\auto.ini`. To turn it off, open the box again, untick `Enable auto mode` and click `OK`.
+
 To select the start speed of the fan, you can run the program with command line parameter `--low-speed`, `--normal-speed` and `--high-speed`, which will set the fan to low speed, normal speed and high speed at start respectively. The default behavior is to set the fan to normal speed if none of these parameters are given. For example, if you want to keep the fan spinning at low speed at start, you can run the command: `LenovoFanControl-x64.exe --low-speed`
 
 **Note:** Use the `Low Speed` mode with caution. Because this program does not have temperature monitoring, using the `Low Speed` mode can easily lead to high hardware temperatures, which can lead to hardware damage.
@@ -60,7 +65,7 @@ If you have `Lenovo ACPI-Compliant Virtual Power Controller` driver installed, t
 
 But there is a problem with this approach, the fan spins periodically. After we instruct the driver to carry out dust removal, the fan spins at maximum speed for about 9 seconds then stops for 2 seconds, and then the next cycle until 2min later. The dust removal is controlled automatically by EC itself, and sometimes may suddenly stop during the 9 seconds of spinning which leads to fan stop spinning for something for 1 to 9 seconds.
 
-For workaround about this problem, firstly, we ask the driver to carry out dust removal, wait for 9 seconds. Then we ask the driver to stop the procedure manually to reset the timing. Finally, we ask the driver to start over the procedure immediately before the fan stop spinning. And then wait for another 9 seconds, then stop, then the next cycle and so on. With the fast on and off switching, the fan won't stop and will spin at the maximum speed all the time except that the speed of the fan will slow down a little bit for a short period of time during the switching time.
+The original project works around this by switching the procedure off and on again every ~9 seconds. This fork does not do that. In `High Speed` mode it asks the driver for maximum speed once, then reads the fan state every 100 ms. Only if the state is no longer maximum (for example because the EC/BIOS changed it) does it switch to normal and back to maximum, since the EC only accepts the maximum-speed request after a normal to maximum transition. When the mode is left or the program exits, the fan is returned to normal speed.
 
 # Disclaimer
 
