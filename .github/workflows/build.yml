@@ -21,7 +21,7 @@ jobs:
         run: |
           mkdir -p bin
           windres -F pe-x86-64 -i res/icon.rc -o bin/icon-x64.o
-          gcc -static -m64 -o bin/LenovoFanControl-x64.exe src/lenovo_fan_control.c src/fanctrl.c bin/icon-x64.o -lpthread -ladvapi32 -mwindows
+          gcc -static -m64 -o bin/LenovoFanControl-x64.exe src/lenovo_fan_control.c src/fanctrl.c src/autoapp.c bin/icon-x64.o -lpthread -ladvapi32 -lcomdlg32 -mwindows
 
       - uses: actions/upload-artifact@v4
         with:
