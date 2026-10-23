@@ -54,11 +54,15 @@ int fan_control(enum FanMode mode);
 enum FanMode read_state();
 
 /**
- * Try to keep the fan in fast mode. 
- * Block until done. Or set "is_keep_fan_running" variable to 0 to terminate.
- * 
- * For more information, refer to:
- * https://github.com/Soberia/Lenovo-IdeaPad-Z500-Fan-Controller?tab=readme-ov-file#-about
+ * Set the fan to FAST and actively hold it there.
+ * While active, polls the EC's reported fan state approximately every
+ * 100 ms via read_state(). If the BIOS/EC changes the state away from
+ * FAST on its own, FAST is immediately re-asserted; if the state is
+ * already FAST, no redundant write occurs.
+ * Blocks until "is_keep_fan_running" is set to 0, at which point the fan is
+ * restored to NORMAL before returning. This does NOT automatically revert
+ * the fan to NORMAL on a timer -- FAST is held until the caller explicitly
+ * cancels it (e.g. by selecting another mode).
  */
 void keep_fan_running();
 

@@ -62,30 +62,27 @@ enum FanMode read_state() {
 void keep_fan_running() {
     is_keep_fan_speed_low = 0;
     is_keep_fan_running = 1;
-    const int interval = 8980; // ms, fine-tuned, see https://www.allstone.lt/ideafan/
-    while (is_keep_fan_running) {
-        while (read_state() != FAST) {
-            fan_control(FAST);
-            Sleep(10);
-        }
-        DWORD start = GetTickCount();
 
-        for (int i = 0; i < interval / 1000 - 1; ++i) {
-            Sleep(1000);
-            if (!is_keep_fan_running) {
-                fan_control(NORMAL);
-                return;
-            }
+    // Set the fan to FAST once initially.
+    fan_control(FAST);
+
+    // Continuously monitor the EC's reported fan state while HIGH mode is
+    // active. If the BIOS/EC changes the state away from FAST on its own,
+    // re-assert FAST. The EC requires a NORMAL -> FAST transition to accept
+    // FAST again (writing FAST directly while it's already off of FAST is
+    // ignored), so cycle through NORMAL first. Only do this when the state
+    // has actually changed -- never write redundantly if it's already FAST.
+    const int poll_interval = 100; // ms
+    while (is_keep_fan_running) {
+        if (read_state() != FAST) {
+            fan_control(NORMAL);
+            Sleep(50);
+            fan_control(FAST);
         }
-        int delta = GetTickCount() - start;
-        if (interval - delta > 0) {
-            Sleep(interval - delta);
-        }
-        while (read_state() != NORMAL) {
-            fan_control(NORMAL); // Reset the fan to NORMAL mode
-            Sleep(10);
-        }
+        Sleep(poll_interval);
     }
+
+    // Only restore NORMAL once HIGH mode has actually been cancelled.
     fan_control(NORMAL);
 }
 

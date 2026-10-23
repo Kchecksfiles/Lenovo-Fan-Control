@@ -11,11 +11,12 @@
 #include <tchar.h>
 
 #include "fanctrl.h"
+#include "autoapp.h"
 #include "../res/resource.h"
 
 #define WM_TRAYICON (WM_USER + 1)
 
-#define VERSION "v0.4.1"
+#define VERSION "v0.5"
 
 enum TrayMenuIDs {
     ID_TRAY_APP_ICON = 1001,
@@ -23,6 +24,7 @@ enum TrayMenuIDs {
     ID_TRAY_LOW_SPEED,
     ID_TRAY_HIGH_SPEED,
     ID_TRAY_NORMAL_SPEED,
+    ID_TRAY_AUTO,
     ID_TRAY_STARTUP,
     ID_TRAY_ABOUT,
     ID_TRAY_EXIT,
@@ -116,6 +118,7 @@ void* keep_fan_running_func(void *arg) {
 }
 
 void toggle_fan_low_speed() {
+    if (!autoapp_applying) autoapp_manual_override();
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_low_speed);
     if (!is_keep_fan_speed_low) {
         pthread_create(&keep_fan_speed_low_thread, NULL, keep_fan_speed_low_func, NULL);
@@ -125,6 +128,7 @@ void toggle_fan_low_speed() {
 }
 
 void toggle_fan_high_speed() {
+    if (!autoapp_applying) autoapp_manual_override();
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_high_speed);
     if (!is_keep_fan_running) {
         pthread_create(&keep_fan_running_thread, NULL, keep_fan_running_func, NULL);
@@ -134,6 +138,7 @@ void toggle_fan_high_speed() {
 }
 
 void toggle_fan_normal_speed() {
+    if (!autoapp_applying) autoapp_manual_override();
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_normal_speed);
     if (is_keep_fan_running) {
         is_keep_fan_running = 0;
@@ -183,6 +188,20 @@ void refresh_startup_menu_check() {
     CheckMenuItem(hMenu, ID_TRAY_STARTUP, MF_BYCOMMAND | (is_startup_enabled() ? MF_CHECKED : MF_UNCHECKED));
 }
 
+static void auto_apply(int speed) {
+    switch (speed) {
+        case AUTOAPP_SPEED_LOW:
+            toggle_fan_low_speed();
+            break;
+        case AUTOAPP_SPEED_NORMAL:
+            toggle_fan_normal_speed();
+            break;
+        default:
+            toggle_fan_high_speed();
+            break;
+    }
+}
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE: {
@@ -202,6 +221,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             AppendMenu(hMenu, MF_STRING, ID_TRAY_HIGH_SPEED, lang->menu_high_speed);
             AppendMenu(hMenu, MF_STRING, ID_TRAY_NORMAL_SPEED, lang->menu_normal_speed);
             AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+            AppendMenu(hMenu, MF_STRING, ID_TRAY_AUTO, autoapp_menu_text());
             AppendMenu(hMenu, MF_STRING, ID_TRAY_STARTUP, lang->menu_startup);
             refresh_startup_menu_check();
             AppendMenu(hMenu, MF_STRING, ID_TRAY_ABOUT, lang->menu_about);
@@ -219,6 +239,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     toggle_fan_normal_speed();
                     break;
             }
+
+            autoapp_init(hwnd, auto_apply);
+            CheckMenuItem(hMenu, ID_TRAY_AUTO, MF_BYCOMMAND | (autoapp_is_enabled() ? MF_CHECKED : MF_UNCHECKED));
             break;
         }
 
@@ -251,6 +274,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
                 case ID_TRAY_NORMAL_SPEED:
                     toggle_fan_normal_speed();
+                    break;
+
+                case ID_TRAY_AUTO:
+                    autoapp_show_dialog(hwnd);
+                    CheckMenuItem(hMenu, ID_TRAY_AUTO, MF_BYCOMMAND | (autoapp_is_enabled() ? MF_CHECKED : MF_UNCHECKED));
                     break;
 
                 case ID_TRAY_STARTUP:
