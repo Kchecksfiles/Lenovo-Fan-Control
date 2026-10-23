@@ -1,8 +1,5 @@
 # Lenovo Laptop Fan Control
 
-
----
-
 Control fan for Lenovo laptops with `Lenovo ACPI-Compliant Virtual Power Controller` driver on Windows.
 
 This project is for the Lenovo laptops whose fan failed to be controlled with mainstream fan control applications (e.g. Notebook FanControl, SpeedFan, Fan Control) on Windows.
@@ -19,7 +16,7 @@ This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandian
 - New **Start with Windows** menu item, to launch the program automatically at login (at normal speed).
 - Unrecognized command line parameters are now ignored, instead of silently resetting the start speed to high speed.
 - **High Speed** is now truly manual. It no longer switches off and on every ~9 seconds. The fan is set to maximum once and held there until you pick another mode. The program checks the fan state every 100 ms and, if the EC/BIOS drops it back, sets it to maximum again.
-- New **Auto (App Trigger)...** menu item: pick an app (e.g. a game) and a fan speed, and the fan switches automatically while that app is running.
+- New **Auto (App Trigger)...** menu item: add one or more apps (e.g. your games) and pick a fan speed, and the fan switches automatically while any of them is running.
 
 # Prerequisites
 
@@ -49,7 +46,7 @@ Finally, you can click the `Exit` item on the menu to terminate the program, the
 
 To make the program start automatically when you log in to Windows, tick the `Start with Windows` item on the menu. Untick it to turn this off. This adds an entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that launches the program with `--normal-speed`, and does not need administrator rights. If you move the program file to another folder, untick and tick the item again to update the path.
 
-To switch the fan speed automatically while a game or app is running, click `Auto (App Trigger)...` on the menu. In the box that opens, choose the app (from the list of running programs, by typing its name such as `game.exe`, or with `Browse...`), choose the fan speed to use while it runs (`High Speed`, `Low Speed` or `Normal Speed`), tick `Enable auto mode` and click `OK`. The program then checks every 2 seconds whether the app is running: when it starts, the fan switches to the chosen speed, and about 15 seconds after the app closes, the fan returns to normal speed. If you change the speed by hand while the app is running, Auto mode will not override your choice. The menu item shows a check mark while Auto mode is on, and the setting is remembered in `%APPDATA%\LenovoFanControl\auto.ini`. To turn it off, open the box again, untick `Enable auto mode` and click `OK`.
+To switch the fan speed automatically while a game or app is running, click `Auto (App Trigger)...` on the menu. In the box that opens, add the apps (pick one from the list of running programs or type its name such as `game.exe` and click `Add`, or use `Browse...`; use `Remove` to take one out of the list), choose the fan speed to use while any of them runs (`High Speed`, `Low Speed` or `Normal Speed`), tick `Enable auto mode` and click `OK`. The program then checks every 2 seconds whether any listed app is running: when one starts, the fan switches to the chosen speed, and about 15 seconds after the last one closes, the fan returns to normal speed. If you change the speed by hand while an app is running, Auto mode will not override your choice. The menu item shows a check mark while Auto mode is on, and the setting is remembered in `%APPDATA%\LenovoFanControl\auto.ini`. To turn it off, open the box again, untick `Enable auto mode` and click `OK`.
 
 To select the start speed of the fan, you can run the program with command line parameter `--low-speed`, `--normal-speed` and `--high-speed`, which will set the fan to low speed, normal speed and high speed at start respectively. The default behavior is to set the fan to normal speed if none of these parameters are given. For example, if you want to keep the fan spinning at low speed at start, you can run the command: `LenovoFanControl-x64.exe --low-speed`
 
