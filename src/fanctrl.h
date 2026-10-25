@@ -54,6 +54,12 @@ int fan_control(enum FanMode mode);
 enum FanMode read_state();
 
 /**
+ * Append a line to the diagnostic log (%APPDATA%\LenovoFanControl\fan.log).
+ * printf-style, ASCII only. The log is kept small automatically.
+ */
+void fan_log(const char *fmt, ...);
+
+/**
  * Set the fan to FAST and actively hold it there.
  * While active, polls the EC's reported fan state approximately every
  * 100 ms via read_state(). If the BIOS/EC changes the state away from

@@ -119,6 +119,7 @@ void* keep_fan_running_func(void *arg) {
 
 void toggle_fan_low_speed() {
     if (!autoapp_applying) autoapp_manual_override();
+    fan_log("mode: low selected (%s)", autoapp_applying ? "auto" : "manual");
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_low_speed);
     if (!is_keep_fan_speed_low) {
         pthread_create(&keep_fan_speed_low_thread, NULL, keep_fan_speed_low_func, NULL);
@@ -129,8 +130,10 @@ void toggle_fan_low_speed() {
 
 void toggle_fan_high_speed() {
     if (!autoapp_applying) autoapp_manual_override();
+    fan_log("mode: high selected (%s)", autoapp_applying ? "auto" : "manual");
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_high_speed);
     if (!is_keep_fan_running) {
+        is_keep_fan_running = 1;  // set now so a second request can't start a second thread
         pthread_create(&keep_fan_running_thread, NULL, keep_fan_running_func, NULL);
     }
     _sntprintf(nid.szTip, 64, TEXT("%ls " VERSION "\n%ls: %ls"), lang->app_name, lang->state, lang->menu_at_high_speed);
@@ -139,6 +142,7 @@ void toggle_fan_high_speed() {
 
 void toggle_fan_normal_speed() {
     if (!autoapp_applying) autoapp_manual_override();
+    fan_log("mode: normal selected (%s)", autoapp_applying ? "auto" : "manual");
     ModifyMenu(hMenu, ID_TRAY_STATE, MF_STRING | MF_DISABLED, ID_TRAY_STATE, lang->menu_at_normal_speed);
     if (is_keep_fan_running) {
         is_keep_fan_running = 0;

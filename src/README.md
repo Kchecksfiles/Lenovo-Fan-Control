@@ -1,0 +1,82 @@
+# Lenovo Laptop Fan Control
+
+Control fan for Lenovo laptops with `Lenovo ACPI-Compliant Virtual Power Controller` driver on Windows.
+
+This project is for the Lenovo laptops whose fan failed to be controlled with mainstream fan control applications (e.g. Notebook FanControl, SpeedFan, Fan Control) on Windows.
+
+However, this project is not a perfect solution for fan control. It can only control the fan to spin at the minimum speed, maximum speed and the normal speed, and dosen't provide any accurate speed control.
+
+This project has the only simple function of controlling fan. If you want more complex functions such as temperature monitoring, fan curves and so on, you can install [FanControl](https://github.com/Rem0o/FanControl.Releases), which is a powerful fan controlling program, and a plugin of it that is [FanControl.LenovoPlugin](https://github.com/jiarandiana0307/FanControl.LenovoPlugin) which is based on this project, to achieve powerful fan control features. 
+
+# About this fork
+
+This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandiana0307/Lenovo-Fan-Control) by jiarandiana0307, released under the same MIT license. What changed:
+
+- The fan now starts at **normal speed** by default. The original starts at high speed. Use `--high-speed` to get the old behavior.
+- New **Start with Windows** menu item, to launch the program automatically at login (at normal speed).
+- Unrecognized command line parameters are now ignored, instead of silently resetting the start speed to high speed.
+- **High Speed** is now truly manual. It no longer switches off and on every ~9 seconds. The fan is set to maximum once and held there until you pick another mode. The program checks the fan state every 100 ms and, if the EC/BIOS drops it back, sets it to maximum again.
+- New **Auto (App Trigger)...** menu item: add one or more apps (e.g. your games), give each its own fan speed, and the fan switches automatically while any of them is running.
+- A small diagnostic log is written to `%APPDATA%\LenovoFanControl\fan.log` (mode changes and times when the EC took the fan out of High Speed). It stays under ~200 KB.
+
+# Prerequisites
+
+- Lenovo laptop
+- Windows operating system
+- `Lenovo ACPI-Compliant Virtual Power Controller` driver installed
+
+# Usage
+
+1. Download binary from [Releases](../../releases).
+
+2. Double-click the LenovoFanControl program to run it, then you will see it in system tray.
+
+If a message box saying `Failed to open\\.\EnergyDrv` popped up, it means the Lenovo driver not found or dosen't work as expected. Otherwise, the program works fine and the fan will spin at normal speed.
+
+![Menu Screenshot](github/menu-screenshot.jpg)
+
+Click the program icon in the system tray, a menu will show up. The first line of the menu tell you the state of the fan, which could be one of the three: 
+
+1. `Low Speed`: the fan is spinning at minimum speed.
+2. `High Speed`: the fan is spinning at maximum speed.
+3. `Normal Speed`: the fan is spinning at normal speed.
+
+You can click the `Low Speed` and `High Speed` item on the menu, or use the corresponding hotkeys `Ctrl+Alt+F10` and `Ctrl+Alt+F11` to keep the fan spinning at minimun and maximum speed respectively. Also, you can click the `Normal Speed` item on the menu or use the corresponding hotkey `Ctrl+Alt+F12` to return the fan to its normal speed.
+
+Finally, you can click the `Exit` item on the menu to terminate the program, then the fan will spin at normal speed.
+
+To make the program start automatically when you log in to Windows, tick the `Start with Windows` item on the menu. Untick it to turn this off. This adds an entry under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` that launches the program with `--normal-speed`, and does not need administrator rights. If you move the program file to another folder, untick and tick the item again to update the path.
+
+To switch the fan speed automatically while a game or app is running, click `Auto (App Trigger)...` on the menu. In the box that opens, first choose the fan speed for the app (`High Speed`, `Low Speed` or `Normal Speed`), then add the app (pick it from the list of running programs or type its name such as `game.exe` and click `Add`, or use `Browse...`). Repeat for each app, so every app can have its own speed. Each entry in the list shows its speed. To change the speed of an app already in the list, select it and pick another speed; use `Remove` to take it out. Then tick `Enable auto mode` and click `OK`. The program checks every 2 seconds whether any listed app is running: when one starts, the fan switches to that app's speed. If several listed apps run at the same time, the one needing the most cooling wins (High, then Normal, then Low). The fan keeps its speed for 1 minute after the last app closes, then returns to normal speed. If you change the speed by hand while an app is running, Auto mode will not override your choice. The menu item shows a check mark while Auto mode is on, and the setting is remembered in `%APPDATA%\LenovoFanControl\auto.ini`. To turn it off, open the box again, untick `Enable auto mode` and click `OK`.
+
+To select the start speed of the fan, you can run the program with command line parameter `--low-speed`, `--normal-speed` and `--high-speed`, which will set the fan to low speed, normal speed and high speed at start respectively. The default behavior is to set the fan to normal speed if none of these parameters are given. For example, if you want to keep the fan spinning at low speed at start, you can run the command: `LenovoFanControl-x64.exe --low-speed`
+
+**Note:** Use the `Low Speed` mode with caution. Because this program does not have temperature monitoring, using the `Low Speed` mode can easily lead to high hardware temperatures, which can lead to hardware damage.
+
+# Theory
+
+Normally, fan in laptop is controlled by Embedded Controller (EC) which is a device responsible for feeding other parts of the system the electric voltage they need. Therefore if EC pass more voltage to the cooling system, this cause fan to spins at maximum speed. For controlling the EC we can change the EC registers to achieve functionality we want, but for some models, we can't find the registers which was dedicated to controlling the fan speed from datasheets. So one reverse engineering the Lenovo Energy Manager software to find how Dust Removal feature of this app actually works and build this program with it. Then it turns out that this software communicate to the EC through `Lenovo ACPI-Compliant Virtual Power Controller` kernel driver. And it's exactly how this project works.
+
+If you have `Lenovo ACPI-Compliant Virtual Power Controller` driver installed, there will be a `\\.\EnergyDrv` device on your system. This device is created by the Lenovo driver to expose the interfaces for communication with other applications, e.g. Lenovo Energy Manager. The driver provides a dust removal function that can control the fan. Therefore, with win32 API, it's easy to read and write specific bytes of the device to control the Lenovo driver, then the driver controls EC, and the EC controls the fan. See the diagram below.
+
+![Diagram](github/diagram.jpg)
+
+But there is a problem with this approach, the fan spins periodically. After we instruct the driver to carry out dust removal, the fan spins at maximum speed for about 9 seconds then stops for 2 seconds, and then the next cycle until 2min later. The dust removal is controlled automatically by EC itself, and sometimes may suddenly stop during the 9 seconds of spinning which leads to fan stop spinning for something for 1 to 9 seconds.
+
+The original project works around this by switching the procedure off and on again every ~9 seconds. This fork does not do that. In `High Speed` mode it asks the driver for maximum speed once, then reads the fan state every 100 ms. Only if the state is no longer maximum (for example because the EC/BIOS changed it) does it switch to normal and back to maximum, since the EC only accepts the maximum-speed request after a normal to maximum transition. When the mode is left or the program exits, the fan is returned to normal speed.
+
+# Disclaimer
+
+This project is not responsible for possible damage of any kind, use it at your own risk.
+
+# References
+
+- [IdeaFan][IdeaFan]
+- [FanControl][FanControl]
+- [Lenovo-IdeaPad-Z500-Fan-Controller][Lenovo-IdeaPad-Z500-Fan-Controller]
+- [Windows Drivers Reverse Engineering Methodology][windows-drivers-reverse-engineering-methodology]
+
+[IdeaFan]: https://www.allstone.lt/ideafan/
+[FanControl]: https://github.com/bitrate16/FanControl
+[Lenovo-IdeaPad-Z500-Fan-Controller]: https://github.com/Soberia/Lenovo-IdeaPad-Z500-Fan-Controller
+[windows-drivers-reverse-engineering-methodology]: https://voidsec.com/windows-drivers-reverse-engineering-methodology/

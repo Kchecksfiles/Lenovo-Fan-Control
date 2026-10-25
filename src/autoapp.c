@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "autoapp.h"
+#include "fanctrl.h"
 
 #define AUTOAPP_TIMER_ID 7001
 #define POLL_INTERVAL_MS 2000   /* how often the process list is checked */
@@ -296,15 +297,18 @@ static void poll(void) {
         cooling = 0;
         if (target != last_target) {
             /* An app started, or the set of running apps now needs another speed. */
+            fan_log("auto: listed app running, applying speed %d", target);
             last_target = target;
             applied = 1;
             do_apply(target);
         }
     } else if (last_target >= 0) {
         if (!cooling) {
+            fan_log("auto: no listed app running, holding speed for 60 s");
             cooling = 1;
             cool_start = GetTickCount();
         } else if (GetTickCount() - cool_start >= COOLDOWN_MS) {
+            fan_log("auto: cool-down over, back to Normal (auto set it: %d)", applied);
             last_target = -1;
             cooling = 0;
             if (applied) {
