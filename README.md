@@ -1,8 +1,8 @@
 # Lenovo Laptop Fan Control
 
-Control fan for Lenovo laptops with `Lenovo ACPI-Compliant Virtual Power Controller` driver on Windows.
+A small system tray app to control the fan of Lenovo laptops on Windows: Low / Normal / High speed from the tray menu or with hotkeys, plus an Auto mode that switches the fan automatically while your games are running.
 
-This project is for the Lenovo laptops whose fan failed to be controlled with mainstream fan control applications (e.g. Notebook FanControl, SpeedFan, Fan Control) on Windows.
+This project is for Lenovo laptops whose fan **can't be controlled by other fan control apps** (e.g. Notebook FanControl, SpeedFan, FanControl) on Windows. It works through the `Lenovo ACPI-Compliant Virtual Power Controller` driver, and **it also works if the Lenovo apps (such as Lenovo Vantage or Legion Zone) are uninstalled**.
 
 However, this project is not a perfect solution for fan control. It can only control the fan to spin at the minimum speed, maximum speed and the normal speed, and dosen't provide any accurate speed control.
 
@@ -23,7 +23,7 @@ This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandian
 
 - Lenovo laptop
 - Windows operating system
-- `Lenovo ACPI-Compliant Virtual Power Controller` driver installed
+- `Lenovo ACPI-Compliant Virtual Power Controller` driver installed (Lenovo apps such as Lenovo Vantage or Legion Zone are **not** required)
 
 # Usage
 
