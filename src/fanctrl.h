@@ -61,14 +61,12 @@ void fan_log(const char *fmt, ...);
 
 /**
  * Set the fan to FAST and actively hold it there.
- * While active, polls the EC's reported fan state approximately every
- * 100 ms via read_state(). If the BIOS/EC changes the state away from
- * FAST on its own, FAST is immediately re-asserted; if the state is
- * already FAST, no redundant write occurs.
+ * The EC drops the maximum speed on its own after a while, so every 15 s a very
+ * short NORMAL -> FAST refresh is done (the same as a manual Normal-then-High
+ * click). The EC state is also checked every ~100 ms and FAST is re-asserted if
+ * it clearly reports NORMAL; failed reads are ignored.
  * Blocks until "is_keep_fan_running" is set to 0, at which point the fan is
- * restored to NORMAL before returning. This does NOT automatically revert
- * the fan to NORMAL on a timer -- FAST is held until the caller explicitly
- * cancels it (e.g. by selecting another mode).
+ * restored to NORMAL before returning.
  */
 void keep_fan_running();
 

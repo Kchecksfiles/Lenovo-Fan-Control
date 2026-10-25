@@ -153,6 +153,12 @@ enum FanMode read_state() {
     return raw == normal_value ? NORMAL : FAST;
 }
 
+/* The EC drops the maximum fan speed on its own after a while (minutes on some laptops),
+ * and the register does not always show it. Doing what a manual "Normal, then High" click
+ * does -- a very short NORMAL, then FAST again -- restarts that timer. It is repeated
+ * well inside the shortest hold time seen (about 1 minute). */
+#define REFRESH_INTERVAL_MS 15000
+
 /* Each call of keep_fan_running() gets a new token; an older call that is still
  * winding down notices the change and leaves the fan alone. */
 static volatile LONG keep_fan_token = 0;
@@ -190,17 +196,22 @@ void keep_fan_running() {
     fan_log("high: started, normal=0x%lx fast=%s0x%lx", (unsigned long)normal_value,
             have_fast ? "" : "unknown/", (unsigned long)fast_value);
 
-    // Watch the EC while HIGH mode is active. If the BIOS/EC takes the fan out of FAST,
-    // switch NORMAL -> FAST again (the EC only accepts FAST after a NORMAL -> FAST
-    // transition). A failed read is NOT treated as a change, and a change must be seen
-    // on consecutive checks before acting, so a busy device can't cause needless switching.
+    // While HIGH mode is active:
+    //  1. Every REFRESH_INTERVAL_MS, repeat NORMAL -> FAST (the same thing a manual
+    //     Normal-then-High click does) so the EC never gets to time out.
+    //  2. In between, watch the EC; if it clearly reports NORMAL, switch NORMAL -> FAST
+    //     right away. A failed read is NOT treated as a change, and the change must be
+    //     seen on two consecutive checks, so a busy device can't cause needless switching.
     const int poll_interval = 100; // ms
     int bad = 0;
     int fails = 0;
+    int refreshes = 0;
     DWORD last_fail_log = 0;
+    DWORD last_diff_log = 0;
     DWORD last_reassert = GetTickCount();
     while (is_keep_fan_running && token == keep_fan_token) {
         DWORD raw;
+        int need_reassert = 0;
         if (!read_raw(&raw)) {
             fails++;
             if (GetTickCount() - last_fail_log > 10000) {
@@ -208,24 +219,33 @@ void keep_fan_running() {
                 fan_log("high: could not read EC state (%d failures so far), ignoring", fails);
             }
         } else {
-            int is_normal = have_normal && raw == normal_value;
-            int changed = have_fast && raw != fast_value;
-            if (is_normal || changed) {
+            if (have_normal && raw == normal_value) {
                 bad++;
+                if (bad >= 2) {
+                    fan_log("high: EC reports NORMAL (raw=0x%lx), re-asserting", (unsigned long)raw);
+                    need_reassert = 1;
+                }
             } else {
                 bad = 0;
+                if (have_fast && raw != fast_value && GetTickCount() - last_diff_log > 30000) {
+                    /* For diagnosis only: the register changed but is not the NORMAL value. */
+                    last_diff_log = GetTickCount();
+                    fan_log("high: register changed (raw=0x%lx, fast=0x%lx, normal=0x%lx)",
+                            (unsigned long)raw, (unsigned long)fast_value, (unsigned long)normal_value);
+                }
             }
-            DWORD since = GetTickCount() - last_reassert;
-            if ((is_normal && bad >= 2) || (changed && bad >= 3 && since >= 3000)) {
-                fan_log("high: fan left FAST (raw=0x%lx normal=0x%lx fast=0x%lx after %lu s), re-asserting",
-                        (unsigned long)raw, (unsigned long)normal_value, (unsigned long)fast_value,
-                        (unsigned long)(since / 1000));
-                fan_control(NORMAL);
-                Sleep(50);
-                send_fast();
-                bad = 0;
-                last_reassert = GetTickCount();
-            }
+        }
+
+        if (!need_reassert && GetTickCount() - last_reassert >= REFRESH_INTERVAL_MS) {
+            need_reassert = 1;
+            refreshes++;
+        }
+        if (need_reassert && is_keep_fan_running && token == keep_fan_token) {
+            fan_control(NORMAL);
+            Sleep(50);
+            send_fast();
+            bad = 0;
+            last_reassert = GetTickCount();
         }
         Sleep(poll_interval);
     }
@@ -235,7 +255,7 @@ void keep_fan_running() {
     if (token == keep_fan_token) {
         fan_control(NORMAL);
     }
-    fan_log("high: stopped");
+    fan_log("high: stopped (%d periodic refreshes)", refreshes);
 }
 
 void keep_fan_speed_low() {
