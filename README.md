@@ -15,8 +15,9 @@ This is a modified version of [Lenovo-Fan-Control](https://github.com/jiarandian
 - The fan now starts at **normal speed** by default. The original starts at high speed. Use `--high-speed` to get the old behavior.
 - New **Start with Windows** menu item, to launch the program automatically at login (at normal speed).
 - Unrecognized command line parameters are now ignored, instead of silently resetting the start speed to high speed.
-- **High Speed** is now truly manual. It no longer switches off and on every ~9 seconds. The fan is set to maximum once and held there until you pick another mode. The program checks the fan state every 100 ms and, if the EC/BIOS drops it back, sets it to maximum again.
+- **High Speed** is now truly manual. It no longer cycles every ~9 seconds. The fan is set to maximum and held there until you pick another mode. Because the EC drops maximum speed on its own after a few minutes, the program repeats a very short Normal-then-High refresh every 15 seconds (the same as clicking Normal then High by hand, only ~50 ms long), and it also checks the fan state every 100 ms and sets it to maximum again if the EC reports normal.
 - New **Auto (App Trigger)...** menu item: add one or more apps (e.g. your games), give each its own fan speed, and the fan switches automatically while any of them is running.
+- A small diagnostic log is written to `%APPDATA%\LenovoFanControl\fan.log` (mode changes and times when the EC took the fan out of High Speed). It stays under ~200 KB.
 
 # Prerequisites
 
@@ -62,7 +63,7 @@ If you have `Lenovo ACPI-Compliant Virtual Power Controller` driver installed, t
 
 But there is a problem with this approach, the fan spins periodically. After we instruct the driver to carry out dust removal, the fan spins at maximum speed for about 9 seconds then stops for 2 seconds, and then the next cycle until 2min later. The dust removal is controlled automatically by EC itself, and sometimes may suddenly stop during the 9 seconds of spinning which leads to fan stop spinning for something for 1 to 9 seconds.
 
-The original project works around this by switching the procedure off and on again every ~9 seconds. This fork does not do that. In `High Speed` mode it asks the driver for maximum speed once, then reads the fan state every 100 ms. Only if the state is no longer maximum (for example because the EC/BIOS changed it) does it switch to normal and back to maximum, since the EC only accepts the maximum-speed request after a normal to maximum transition. When the mode is left or the program exits, the fan is returned to normal speed.
+The original project works around this by switching the procedure off and on again every ~9 seconds. This fork refreshes much less often and for much less time. In `High Speed` mode it asks the driver for maximum speed, then every 15 seconds switches to normal and straight back to maximum (about 50 ms apart), which restarts the EC timer so the fan is never dropped. It also reads the fan state every 100 ms and, if the EC reports normal, switches to normal and back to maximum right away, since the EC only accepts the maximum-speed request after a normal to maximum transition. When the mode is left or the program exits, the fan is returned to normal speed.
 
 # Disclaimer
 
